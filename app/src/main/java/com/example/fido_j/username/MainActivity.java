@@ -39,7 +39,7 @@ public class MainActivity extends AppCompatActivity {
     private String Preferences_Username_Key="USER_NAME_KEY";
     private String Preferences_Password_Key="USER_PASSWORD_KEY";
     private String Credentials_Key="CREDENTIALS_KEY";
-    private String username,password;
+    private String username,password,savedUsername;
     private String userAgent=BuildConfig.APPLICATION_ID+"/"+BuildConfig.VERSION_NAME+
             "(Android "+Build.VERSION.RELEASE+"; "+Build.MODEL+"; "+Build.BRAND+")";
     private int credentials;
@@ -57,6 +57,14 @@ public class MainActivity extends AppCompatActivity {
                 api.username(username);
                 editor.putString(Preferences_Username_Key,username);
                 editor.commit();
+                if(savedUsername.equals(username)){
+                    editor.putInt(Credentials_Key,1);
+                    editor.commit();
+                }
+                else{
+                    editor.putInt(Credentials_Key,0);
+                    editor.commit();
+                }
                 Intent intent = new Intent(MainActivity.this, AuthActivity.class);
                 startActivity(intent);
                 finish();
@@ -65,7 +73,7 @@ public class MainActivity extends AppCompatActivity {
     }
     //判斷有否帳號密碼
     public void init(){
-        username =getSharedPreferences("Save",0).getString(Preferences_Username_Key,"");
+        savedUsername =getSharedPreferences("Save",0).getString(Preferences_Username_Key,"");
         password =getSharedPreferences("Save",0).getString(Preferences_Password_Key,"");
         credentials = getSharedPreferences("Save",0).getInt(Credentials_Key,0);
         Log.d("Main","User:"+username+"\n"+"Pass:"+password);

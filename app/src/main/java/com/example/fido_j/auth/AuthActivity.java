@@ -41,9 +41,11 @@ public class AuthActivity extends AppCompatActivity {
     private BiometricPrompt.PromptInfo prompt;
     private BiometricPrompt biometricPrompt;
     private String password;
+    private String Preferences_Username_Key="USER_NAME_KEY";
     private String Preferences_Password_Key="USER_PASSWORD_KEY";
     private String Credentials_Key="CREDENTIALS_KEY";
     private int Credentials=0;
+    private String username;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -67,12 +69,16 @@ public class AuthActivity extends AppCompatActivity {
                     @Override
                     public void onAuthenticationSucceeded(@NonNull BiometricPrompt.AuthenticationResult result) {
                         super.onAuthenticationSucceeded(result);
-                        Toast.makeText(getApplicationContext(),"Authen Succeed",Toast.LENGTH_SHORT).show();
+                        if(Credentials==1) {
+                            Toast.makeText(getApplicationContext(), "登入成功!", Toast.LENGTH_SHORT).show();
+                        }
+                        else{
+                            Toast.makeText(getApplicationContext(), "註冊成功!", Toast.LENGTH_SHORT).show();
+                        }
                         editor.putInt(Credentials_Key,1);
                         editor.commit();
                         Intent intent = new Intent(AuthActivity.this, CredentialsActivity.class);
                         startActivity(intent);
-                        Toast.makeText(getApplicationContext(),"註冊成功!",Toast.LENGTH_SHORT).show();
                         finish();
                     }
 
@@ -94,10 +100,12 @@ public class AuthActivity extends AppCompatActivity {
         });
     }
     public void init(){
+        username=getSharedPreferences("Save",0).getString(Preferences_Username_Key,"");
         Credentials=getSharedPreferences("Save",0).getInt(Credentials_Key,0);
         password =getSharedPreferences("Save",0).getString(Preferences_Password_Key,"");
         if(Credentials==1) {
             biometricPrompt.authenticate(prompt);
         }
+        binding.txvTitle.setText("Welcome,"+username+"!");
     }
 }

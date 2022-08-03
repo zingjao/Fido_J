@@ -47,6 +47,7 @@ public class CredentialsActivity extends AppCompatActivity {
     private String Preferences_Username_Key="USER_NAME_KEY";
     private String Preferences_Password_Key="USER_PASSWORD_KEY";
     private String Credentials_Key="CREDENTIALS_KEY";
+    private String username;
     private ActivityResultLauncher<IntentSenderRequest> createCredentialIntentLauncher = registerForActivityResult(
             new ActivityResultContracts.StartIntentSenderForResult(), new ActivityResultCallback<ActivityResult>() {
                 @Override
@@ -57,13 +58,15 @@ public class CredentialsActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_auth);
+        binding = DataBindingUtil.setContentView(this,R.layout.activity_creditials);
+//        setContentView(R.layout.activity_auth);
 //        createCredentialIntentLauncher.launch(
 //                IntentSenderRequest.Builder(intent).build()
 //        );
         preferences= getSharedPreferences("Save",0);
         editor=preferences.edit();
         context=this;
+        init();
 //        manager=BiometricManager.from(context);
 //        switch (manager.canAuthenticate()){
 //            case BiometricManager.BIOMETRIC_SUCCESS:
@@ -126,5 +129,10 @@ public class CredentialsActivity extends AppCompatActivity {
             startActivity(intent);
             finish();
         });
+    }
+    public void init(){
+        username=preferences.getString(Preferences_Username_Key,"");
+        Log.d("tagggg",""+username);
+        binding.txvTitle.setText("Welcome,"+username+"!");
     }
 }
