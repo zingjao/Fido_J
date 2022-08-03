@@ -14,6 +14,14 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
+    signingConfigs {
+        release {
+            storeFile file("keystore.jks")
+            storePassword "fido2password"
+            keyAlias "fido2"
+            keyPassword "fido2password"
+        }
+    }
     buildFeatures {
         dataBinding true
     }
@@ -30,6 +38,7 @@ android {
 }
 
 dependencies {
+    implementation 'com.google.android.gms:play-services-fido:19.0.0-beta'
     implementation 'androidx.biometric:biometric:1.0.1'
     implementation 'com.google.android.gms:play-services-fido:17.0.0'
     def okhttp_version = '4.9.0'

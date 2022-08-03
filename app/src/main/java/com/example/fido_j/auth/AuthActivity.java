@@ -68,8 +68,11 @@ public class AuthActivity extends AppCompatActivity {
                     public void onAuthenticationSucceeded(@NonNull BiometricPrompt.AuthenticationResult result) {
                         super.onAuthenticationSucceeded(result);
                         Toast.makeText(getApplicationContext(),"Authen Succeed",Toast.LENGTH_SHORT).show();
+                        editor.putInt(Credentials_Key,1);
+                        editor.commit();
                         Intent intent = new Intent(AuthActivity.this, CredentialsActivity.class);
                         startActivity(intent);
+                        Toast.makeText(getApplicationContext(),"註冊成功!",Toast.LENGTH_SHORT).show();
                         finish();
                     }
 
@@ -83,19 +86,17 @@ public class AuthActivity extends AppCompatActivity {
         binding.btnNext.setOnClickListener(view->{
             password=binding.etPassword.getText().toString();
             if(!password.equals("")) {
-                api.password();
+                api.password(password);
                 editor.putString(Preferences_Password_Key,password);
                 editor.commit();
-                Intent intent = new Intent(AuthActivity.this, CredentialsActivity.class);
-                startActivity(intent);
-                finish();
+                biometricPrompt.authenticate(prompt);
             }
         });
     }
     public void init(){
         Credentials=getSharedPreferences("Save",0).getInt(Credentials_Key,0);
         password =getSharedPreferences("Save",0).getString(Preferences_Password_Key,"");
-        if(Credentials==1){
+        if(Credentials==1) {
             biometricPrompt.authenticate(prompt);
         }
     }
