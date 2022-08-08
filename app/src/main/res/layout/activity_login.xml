@@ -1,21 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <data>
-
+        <variable
+            name="username"
+            type="String" />
+        <variable
+            name="view"
+            type="com.example.fido_j.LoginActivity" />
     </data>
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        tools:context=".LoginActivity">
 
         <EditText
-            android:id="@+id/et_password"
+            android:id="@+id/et_username"
             android:layout_width="312dp"
             android:layout_height="48dp"
             android:ems="10"
-            android:hint="Password"
+            android:hint="Username"
+            android:text="@={username}"
             android:inputType="textPersonName"
             android:maxLines="1"
             app:layout_constraintBottom_toBottomOf="parent"
@@ -29,7 +37,7 @@
             android:layout_width="317dp"
             android:layout_height="54dp"
             android:gravity="center"
-            android:text="Welcome,User!"
+            android:text="Sign In"
             android:textAppearance="@style/TextAppearance.MaterialComponents.Headline4"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
@@ -45,9 +53,23 @@
             android:textSize="22dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.916"
+            app:layout_constraintHorizontal_bias="0.914"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_bias="0.32" />
+            app:layout_constraintVertical_bias="0.342" />
+
+        <Button
+            android:id="@+id/btn_regist"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Regist"
+            android:textSize="22dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.054"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_bias="0.342" />
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>

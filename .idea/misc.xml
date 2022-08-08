@@ -3,6 +3,10 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="..\:/Users/deepdarker/AndroidStudioProjects/0805fido/Fido_J/app/src/main/res/layout/activity_auth.xml" value="0.16354166666666667" />
+        <entry key="..\:/Users/deepdarker/AndroidStudioProjects/0805fido/Fido_J/app/src/main/res/layout/activity_login.xml" value="0.17916666666666667" />
+        <entry key="..\:/Users/deepdarker/AndroidStudioProjects/0805fido/Fido_J/app/src/main/res/layout/activity_main.xml" value="0.16354166666666667" />
+        <entry key="..\:/Users/deepdarker/AndroidStudioProjects/0805fido/Fido_J/app/src/main/res/layout/activity_register.xml" value="0.16354166666666667" />
         <entry key="..\:/Users/deepdarker/AndroidStudioProjects/Fido_J/app/src/main/res/drawable/ic_add.xml" value="0.1953125" />
         <entry key="..\:/Users/deepdarker/AndroidStudioProjects/Fido_J/app/src/main/res/drawable/ic_delete.xml" value="0.1953125" />
         <entry key="..\:/Users/deepdarker/AndroidStudioProjects/Fido_J/app/src/main/res/layout/activity_auth.xml" value="0.16458333333333333" />

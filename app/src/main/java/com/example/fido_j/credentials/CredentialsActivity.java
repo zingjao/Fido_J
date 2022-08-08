@@ -6,30 +6,24 @@ import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
-import android.widget.Toast;
 
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.IntentSenderRequest;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.biometric.BiometricManager;
-import androidx.biometric.BiometricPrompt;
-import androidx.core.content.ContextCompat;
 import androidx.databinding.DataBindingUtil;
 import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.fido_j.CredentialsAdapter;
+import com.example.fido_j.LoginActivity;
 import com.example.fido_j.R;
 import com.example.fido_j.databinding.ActivityCreditialsBinding;
 import com.example.fido_j.username.MainActivity;
 import com.google.android.gms.fido.Fido;
-import com.google.android.gms.fido.fido2.api.common.AuthenticatorResponse;
-import com.google.android.gms.fido.fido2.api.common.PublicKeyCredential;
 
 import java.util.ArrayList;
 
@@ -38,8 +32,9 @@ public class CredentialsActivity extends AppCompatActivity {
     private SharedPreferences preferences;
     private SharedPreferences.Editor editor;
     private ActivityCreditialsBinding binding;
+    private Bundle bundle;
     private Context context;
-//    private BiometricManager manager;
+    //    private BiometricManager manager;
 //    private BiometricPrompt.PromptInfo prompt;
 //    private BiometricPrompt biometricPrompt;
     private CredentialsAdapter adapter;
@@ -47,12 +42,12 @@ public class CredentialsActivity extends AppCompatActivity {
     private String Preferences_Username_Key="USER_NAME_KEY";
     private String Preferences_Password_Key="USER_PASSWORD_KEY";
     private String Credentials_Key="CREDENTIALS_KEY";
-    private String username;
+    private String username,challenge;
     private ActivityResultLauncher<IntentSenderRequest> createCredentialIntentLauncher = registerForActivityResult(
             new ActivityResultContracts.StartIntentSenderForResult(), new ActivityResultCallback<ActivityResult>() {
                 @Override
                 public void onActivityResult(ActivityResult result) {
-                    Log.d("tag",""+result.getData().getByteArrayExtra(Fido.FIDO2_KEY_CREDENTIAL_EXTRA));
+                    Log.d("tag",""+result.getData().getByteArrayExtra(Fido.FIDO2_KEY_RESPONSE_EXTRA));
                 }
             });
     @Override
@@ -125,14 +120,26 @@ public class CredentialsActivity extends AppCompatActivity {
             editor.remove(Preferences_Password_Key);
 //            editor.remove(Credentials_Key);
             editor.commit();
-            Intent intent = new Intent(CredentialsActivity.this,MainActivity.class);
+            Intent intent = new Intent(CredentialsActivity.this, LoginActivity.class);
             startActivity(intent);
             finish();
         });
     }
     public void init(){
+//        bundle=getIntent().getExtras();
+//        challenge=bundle.getString("Challenge");
         username=preferences.getString(Preferences_Username_Key,"");
+        ArrayList<String> userList = new ArrayList<>();
+        ArrayList<String> challengeList = new ArrayList<>();
+        userList.add("username");
+        challengeList.add("challenge");
         Log.d("tagggg",""+username);
         binding.txvTitle.setText("Welcome,"+username+"!");
+        adapter = new CredentialsAdapter(userList,challengeList);
+        binding.RecyclerView.setLayoutManager(new LinearLayoutManager(getApplicationContext()));//使用LinearLayout布局
+        //分割線套件
+        binding.RecyclerView.addItemDecoration(new DividerItemDecoration(getApplicationContext(),
+                DividerItemDecoration.VERTICAL));
+        binding.RecyclerView.setAdapter(adapter);//將資料給recyclerView顯示
     }
 }
