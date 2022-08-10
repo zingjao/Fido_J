@@ -50,6 +50,7 @@ public class LoginActivity extends AppCompatActivity {
     private PublicKeyCredentialRpEntity rpEntity;
     private PublicKeyCredentialUserEntity userEntity;
     private List<PublicKeyCredentialParameters> parametersList;
+    private int AUTH_ACTIVITY_RES_5=5;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -116,7 +117,7 @@ public class LoginActivity extends AppCompatActivity {
 //                        }
 //                    }
 //                });
-                biometricPrompt.authenticate(prompt);
+//                biometricPrompt.authenticate(prompt);
             }
         });
     }
@@ -198,10 +199,10 @@ public class LoginActivity extends AppCompatActivity {
     public void init(){
         rpEntity = new PublicKeyCredentialRpEntity("strategics-fido2.firebaseapp.com", "Fido2Demo", null);
         userEntity = new PublicKeyCredentialUserEntity(
-                "demo@example.com".getBytes(),
-                "demo@example.com",
+                "demo2@example.com".getBytes(),
+                "demo2@example.com",
                 null,
-                "Demo User"
+                "Demo User2"
         );
         parametersList =Collections.singletonList(new PublicKeyCredentialParameters(
                 PublicKeyCredentialType.PUBLIC_KEY.toString(),

@@ -11,6 +11,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Fido_J" tools:ignore="AllowBackup,GoogleAppIndexingWarning">
+        <meta-data android:name="asset_statements" android:resource="@string/asset_statements" />
         <activity
             android:name="com.example.fido_j.LoginActivity"
             android:exported="true" >

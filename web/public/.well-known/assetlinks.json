@@ -1,11 +1,24 @@
 [
   {
-    "relation": ["delegate_permission/common.handle_all_urls","delegate_permission/common.get_login_creds"],
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "web",
+      "site": "https://entertaining-maddening-beluga.glitch.me"
+    }
+  },
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.example.fido_j",
+      "package_name": "com.example.android.fido_j",
       "sha256_cert_fingerprints": [
-        "C5:8B:E3:9B:36:B3:67:12:D7:0C:DA:C5:9D:65:2A:FC:43:9B:AE:1B:76:C9:7D:A1:7E:69:2B:7A:15:AB:27:96"
+        "BF:1D:76:1E:9A:51:D5:D5:25:26:76:E5:9B:18:D8:F3:03:50:39:17:8F:9D:C6:4E:09:DB:57:6C:CF:0E:EE:72"
       ]
     }
   }

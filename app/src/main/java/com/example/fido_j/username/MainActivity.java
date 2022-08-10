@@ -2,28 +2,25 @@ package com.example.fido_j.username;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.IntentSenderRequest;
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.biometric.BiometricManager;
 import androidx.biometric.BiometricPrompt;
-import androidx.core.content.ContextCompat;
 import androidx.databinding.DataBindingUtil;
 
+import android.app.Activity;
+import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.util.Base64;
 import android.util.Log;
 import android.widget.Toast;
 
 import com.example.fido_j.BuildConfig;
-import com.example.fido_j.LoginActivity;
 import com.example.fido_j.R;
 import com.example.fido_j.api.AuthApi;
-import com.example.fido_j.credentials.CredentialsActivity;
 import com.example.fido_j.databinding.ActivityMainBinding;
 import com.google.android.gms.fido.Fido;
 import com.google.android.gms.fido.fido2.Fido2ApiClient;
@@ -32,6 +29,7 @@ import com.google.android.gms.fido.fido2.api.common.AuthenticatorAssertionRespon
 import com.google.android.gms.fido.fido2.api.common.AuthenticatorAttestationResponse;
 import com.google.android.gms.fido.fido2.api.common.AuthenticatorErrorResponse;
 import com.google.android.gms.fido.fido2.api.common.EC2Algorithm;
+import com.google.android.gms.fido.fido2.api.common.PublicKeyCredential;
 import com.google.android.gms.fido.fido2.api.common.PublicKeyCredentialCreationOptions;
 import com.google.android.gms.fido.fido2.api.common.PublicKeyCredentialParameters;
 import com.google.android.gms.fido.fido2.api.common.PublicKeyCredentialRpEntity;
@@ -41,19 +39,15 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 
-import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import kotlin.text.Charsets;
-import okhttp3.Interceptor;
-import okhttp3.OkHttpClient;
 
 public class MainActivity extends AppCompatActivity {
     private ActivityMainBinding binding;
+    private Task<PendingIntent> fido2PendingIntent;
     private AuthApi api=new AuthApi();
     private SharedPreferences preferences;
     private SharedPreferences.Editor editor;
@@ -72,13 +66,16 @@ public class MainActivity extends AppCompatActivity {
     private PublicKeyCredentialRpEntity rpEntity;
     private PublicKeyCredentialUserEntity userEntity;
     private List<PublicKeyCredentialParameters> parametersList;
-    private String challenge;
     private ActivityResultLauncher<IntentSenderRequest> registerRequest;
     private IntentSenderRequest senderRequest;
+    private Activity activity;
+    private PublicKeyCredentialCreationOptions options;
+    private PublicKeyCredential credential;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 //        setContentView(R.layout.activity_main);
+        activity=this;
         preferences= getSharedPreferences("Save",MODE_PRIVATE);
         editor=preferences.edit();
 //        prompt=new BiometricPrompt.PromptInfo.Builder()
@@ -122,83 +119,70 @@ public class MainActivity extends AppCompatActivity {
                     public void run() {
                         api.username(username);
                         try {
+                            Thread.sleep(3000);
+                            api.password(password);
                             Thread.sleep(5000);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
+                            options = api.registerRequest();
+                            Log.d("Options:",""+options);
+
+                            Fido2ApiClient fido2ApiClient = Fido.getFido2ApiClient(getApplicationContext());
+                            fido2PendingIntent = fido2ApiClient.getRegisterPendingIntent(options);
+
+                            fido2PendingIntent.addOnSuccessListener(new OnSuccessListener<PendingIntent>() {
+
+                                @Override
+                                public void onSuccess(PendingIntent fido2PendingIntent) {
+                                    new Thread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            try {
+                                                Log.d("IntentSenderrrrr",""+fido2PendingIntent.getIntentSender().toString());
+                                                activity.startIntentSenderForResult(
+                                                        fido2PendingIntent.getIntentSender(),
+                                                        1,
+                                                        null, // fillInIntent,
+                                                        0, // flagsMask,
+                                                        0, // flagsValue,
+                                                        0); //extraFlags);
+                                            } catch (Exception e) {
+                                                Log.d("LOGTAG", "" + e.getMessage());
+                                            }
+                                        }
+                                    }).start();
+
+                                }
+                            });
+                        } catch (Exception e) {
+                            Log.d("ErrMessage",""+e.getMessage());
                         }
-                        api.password(password);
+
                     }
                 }).start();
                 editor.putString(Preferences_Username_Key,username);
                 editor.putString(Preferences_Password_Key,password);
                 editor.commit();
-                PublicKeyCredentialCreationOptions options = new PublicKeyCredentialCreationOptions.Builder()
-                        .setRp(rpEntity)
-                        .setUser(userEntity)
-                        .setChallenge(challenge())
-                        .setParameters(parametersList).build();
-                Fido2ApiClient fido2ApiClient = Fido.getFido2ApiClient(getApplicationContext());
-                Task<Fido2PendingIntent> fido2PendingIntent= fido2ApiClient.getRegisterIntent(options);
-                fido2PendingIntent.addOnSuccessListener(new OnSuccessListener<Fido2PendingIntent>() {
-                    @Override
-                    public void onSuccess(Fido2PendingIntent fido2PendingIntent) {
-//                      try {
-//                            activity.startIntentSenderForResult(
-//                                    pendingIntent.getIntentSender(),
-//                                    1,
-//                                    null, // fillInIntent,
-//                                    0, // flagsMask,
-//                                    0, // flagsValue,
-//                                    0); //extraFlags);
-//                        } catch (IntentSender.SendIntentException e) {
-//                            Log.d("SenderError",""+e.getMessage());
-//                        }
-                        if (fido2PendingIntent.hasPendingIntent()) {
-                            Log.d("LOGTAG", "launching Fido2 Pending Intent");
-                            try {
-                                fido2PendingIntent.launchPendingIntent(MainActivity.this, REQUEST_CODE_REGISTER);
-                            } catch (IntentSender.SendIntentException e) {
-                                Log.d("LOGTAG", ""+e.getMessage());
-                            }
-                        }
-                    }
-                });
+
+
 //                biometricPrompt.authenticate(prompt);
-//                new Thread(new Runnable() {
-//                    @Override
-//                    public void run() {
-//                        if(senderRequest==null) {
-//                            try {
-//                                senderRequest = new IntentSenderRequest.Builder(Tasks.await(fido2PendingIntent)).build();
-//                            } catch (ExecutionException e) {
-//                                e.printStackTrace();
-//                            } catch (InterruptedException e) {
-//                                e.printStackTrace();
-//                            }
-//                        }
-//                        try {
-//                            registerRequest.launch(senderRequest);
-//                        } catch (Exception e) {
-//                            Log.d("Errorcode!", e.getMessage());
-//                        }
-//                    }
-//                }).start();
-//            }
-            }
+                }
         });
     }
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+
         Log.d("LOG_TAG",""+data.hasExtra(Fido.FIDO2_KEY_RESPONSE_EXTRA)+"\n" +
                 data.hasExtra(Fido.FIDO2_KEY_ERROR_EXTRA)+"\n"+
                 data.hasExtra(Fido.KEY_RESPONSE_EXTRA));
         if (resultCode == RESULT_OK) {
             if (data.hasExtra(Fido.FIDO2_KEY_RESPONSE_EXTRA)) {
                 byte[] fido2Response = data.getByteArrayExtra(Fido.FIDO2_KEY_RESPONSE_EXTRA);
+                byte[] credentialByte = data.getByteArrayExtra(Fido.FIDO2_KEY_CREDENTIAL_EXTRA);
                 Log.d("Response Extra",""+fido2Response);
+
                 if (requestCode==1) {
-                    handleRegisterResponse(fido2Response);
+                    credential =PublicKeyCredential.deserializeFromBytes(credentialByte);
+                    handleRegisterResponse(fido2Response,credential);
                 }
                 else if(requestCode==2){
                     handleSignResponse(fido2Response);
@@ -215,34 +199,26 @@ public class MainActivity extends AppCompatActivity {
         String errorMessage = authenticatorErrorResponse.getErrorMessage();
         Log.e("LOG_TAG", "errorCode.name:"+errorName);
         Log.e("LOG_TAG", "errorMessage:"+errorMessage);
+        Toast.makeText(getApplicationContext(),errorMessage,Toast.LENGTH_SHORT).show();
     }
 
-    private void handleRegisterResponse(byte[] fido2Response) {
+    private void handleRegisterResponse(byte[] fido2Response,PublicKeyCredential credential) {
         AuthenticatorAttestationResponse response = AuthenticatorAttestationResponse.deserializeFromBytes(fido2Response);
-        String keyHandleBase64 = Base64.encodeToString(response.getKeyHandle(), Base64.DEFAULT);
-        String clientDataJson = new String(response.getClientDataJSON(), Charsets.UTF_8);
-        String attestationObjectBase64 = Base64.encodeToString(response.getAttestationObject(), Base64.DEFAULT);
-
-        Log.d("LOG_TAG", "keyHandleBase64: $keyHandleBase64");
-        Log.d("LOG_TAG", "clientDataJSON: $clientDataJson");
-        Log.d("LOG_TAG", "attestationObjectBase64: $attestationObjectBase64");
-
-        String registerFido2Result = "Authenticator Attestation Response\n\n" +
-                "keyHandleBase64:\n" +
-                "$keyHandleBase64\n\n" +
-                "clientDataJSON:\n" +
-                "$clientDataJson\n\n" +
-                "attestationObjectBase64:\n" +
-                "$attestationObjectBase64\n";
-
-        Log.d("FidoResult:",""+registerFido2Result);
+        String keyHandleBase64 = Base64.encodeToString(response.getKeyHandle(), Base64.NO_WRAP);
+        String clientDataJsonBody = new String(response.getClientDataJSON(), Charsets.UTF_8);
+        String clientDataJson = Base64.encodeToString(response.getClientDataJSON(),Base64.NO_WRAP);
+        String attestationObjectBase64 = Base64.encodeToString(response.getAttestationObject(), Base64.NO_WRAP);
+        api.registerResponse(keyHandleBase64,clientDataJson,attestationObjectBase64,credential);
+        Log.d("LOG_TAG", "keyHandleBase64:"+keyHandleBase64);
+        Log.d("LOG_TAG", "clientDataJSON:"+clientDataJson);
+        Log.d("LOG_TAG", "attestationObjectBase64:"+attestationObjectBase64);
     }
     private void handleSignResponse(byte[] fido2Response) {
         AuthenticatorAssertionResponse response = AuthenticatorAssertionResponse.deserializeFromBytes(fido2Response);
-        String keyHandleBase64 = Base64.encodeToString(response.getKeyHandle(), Base64.DEFAULT);
+        String keyHandleBase64 = Base64.encodeToString(response.getKeyHandle(), Base64.NO_WRAP);
         String clientDataJson = new String(response.getClientDataJSON(), Charsets.UTF_8);
-        String authenticatorDataBase64 = Base64.encodeToString(response.getAuthenticatorData(), Base64.DEFAULT);
-        String signatureBase64 = Base64.encodeToString(response.getSignature(), Base64.DEFAULT);
+        String authenticatorDataBase64 = Base64.encodeToString(response.getAuthenticatorData(), Base64.NO_WRAP);
+        String signatureBase64 = Base64.encodeToString(response.getSignature(), Base64.NO_WRAP);
 
         Log.d("LOG_TAG", "keyHandleBase64:"+keyHandleBase64);
         Log.d("LOG_TAG", "clientDataJSON:"+clientDataJson);
@@ -272,14 +248,14 @@ public class MainActivity extends AppCompatActivity {
         credentials = getSharedPreferences("Save",0).getInt(Credentials_Key,0);
         Log.d("Main","User:"+username+"\n"+"Pass:"+password);
         if(rpEntity==null) {
-            rpEntity = new PublicKeyCredentialRpEntity("strategics-fido2.firebaseapp.com", "Fido2Demo", null);
+            rpEntity = new PublicKeyCredentialRpEntity("entertaining-maddening-beluga.glitch.me", "WebAuthn Codelab", null);
         }
         if (userEntity==null) {
             userEntity= new PublicKeyCredentialUserEntity(
-                    "demo@example.com".getBytes(),
-                    "demo@example.com",
+                    "AR1SPUq7H6u5uKONczmR3r3r3vso6X0VamBTDq8QgVA".getBytes(),
+                    "uu",
                     null,
-                    "Demo User"
+                    "uu"
             );
         }
         parametersList = Collections.singletonList(new PublicKeyCredentialParameters(
