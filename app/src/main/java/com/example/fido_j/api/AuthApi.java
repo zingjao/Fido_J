@@ -161,7 +161,7 @@ public class AuthApi {
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                // 連線成功
+                // 連線成功(會失敗1~2次屬正常)
                 String result = response.body().string();
                 try {
                     JSONObject json = new JSONObject(result);
