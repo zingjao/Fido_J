@@ -2,8 +2,10 @@ package com.example.fido_j;
 
 import android.app.Activity;
 import android.app.PendingIntent;
+import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
+import android.media.audiofx.DynamicsProcessing;
 import android.os.Bundle;
 import android.util.Base64;
 import android.util.Log;
@@ -27,6 +29,7 @@ import com.google.android.gms.fido.fido2.api.common.AuthenticatorAssertionRespon
 import com.google.android.gms.fido.fido2.api.common.AuthenticatorAttestationResponse;
 import com.google.android.gms.fido.fido2.api.common.AuthenticatorErrorResponse;
 import com.google.android.gms.fido.fido2.api.common.EC2Algorithm;
+import com.google.android.gms.fido.fido2.api.common.PublicKeyCredential;
 import com.google.android.gms.fido.fido2.api.common.PublicKeyCredentialCreationOptions;
 import com.google.android.gms.fido.fido2.api.common.PublicKeyCredentialParameters;
 import com.google.android.gms.fido.fido2.api.common.PublicKeyCredentialRequestOptions;
@@ -54,14 +57,12 @@ public class LoginActivity extends AppCompatActivity {
     private AuthApi api=new AuthApi();
     private String challenge;
     private int REQUEST_CODE_REGISTER =1;
-    private PublicKeyCredentialRpEntity rpEntity;
-    private PublicKeyCredentialUserEntity userEntity;
-    private List<PublicKeyCredentialParameters> parametersList;
     private int AUTH_ACTIVITY_RES_5=5;
     private String publicKey,credId;
     private PublicKeyCredentialRequestOptions requestOptions;
     private Task<PendingIntent> fido2PendingIntent;
     private Activity activity;
+    private Context context;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,6 +70,7 @@ public class LoginActivity extends AppCompatActivity {
 //        setContentView(R.layout.activity_register);
         binding= DataBindingUtil.setContentView(this, R.layout.activity_login);
         activity=this;
+        context=getApplicationContext();
         init();
 //        prompt=new BiometricPrompt.PromptInfo.Builder()
 //                .setTitle("指紋認證")
@@ -123,7 +125,7 @@ public class LoginActivity extends AppCompatActivity {
                             api.password(" ", new AuthApi.PasswordInterface() {
                                 @Override
                                 public void PasswordSuccess() {
-                                    api.signinRequest(credId, new AuthApi.SignRequestInterface() {
+                                    api.signinRequest(credId,context, new AuthApi.SignRequestInterface() {
                                         @Override
                                         public void SignRequestSuccess(PublicKeyCredentialRequestOptions publicKeyCredentialRequestOptions) {
                                             requestOptions=publicKeyCredentialRequestOptions;
@@ -208,6 +210,8 @@ public class LoginActivity extends AppCompatActivity {
         +data.hasExtra(Fido.FIDO2_KEY_ERROR_EXTRA)+"\n"
         +data.hasExtra(Fido.KEY_RESPONSE_EXTRA));
         if (resultCode == RESULT_OK) {
+            PublicKeyCredential credential = PublicKeyCredential.deserializeFromBytes(data.getByteArrayExtra(Fido.FIDO2_KEY_CREDENTIAL_EXTRA));
+//            Log.d("Credentialllll",""+credential.getResponse());
             if (data.hasExtra(Fido.FIDO2_KEY_RESPONSE_EXTRA)) {
                 byte[] fido2Response = data.getByteArrayExtra(Fido.FIDO2_KEY_RESPONSE_EXTRA);
                 Log.d("Response Extra",""+fido2Response);
@@ -251,17 +255,6 @@ public class LoginActivity extends AppCompatActivity {
                 "$signatureBase64\n";
     }
     public void init(){
-        rpEntity = new PublicKeyCredentialRpEntity("strategics-fido2.firebaseapp.com", "Fido2Demo", null);
-        userEntity = new PublicKeyCredentialUserEntity(
-                "demo2@example.com".getBytes(),
-                "demo2@example.com",
-                null,
-                "Demo User2"
-        );
-        parametersList =Collections.singletonList(new PublicKeyCredentialParameters(
-                PublicKeyCredentialType.PUBLIC_KEY.toString(),
-                EC2Algorithm.ES256.getAlgoValue()
-        ));
 
     }
 }

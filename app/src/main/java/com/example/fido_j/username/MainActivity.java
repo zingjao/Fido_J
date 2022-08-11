@@ -10,7 +10,6 @@ import androidx.databinding.DataBindingUtil;
 import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.Intent;
-import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
@@ -22,28 +21,24 @@ import com.example.fido_j.BuildConfig;
 import com.example.fido_j.R;
 import com.example.fido_j.api.AuthApi;
 import com.example.fido_j.databinding.ActivityMainBinding;
+import com.example.fido_j.ShareKeyHandle;
 import com.google.android.gms.fido.Fido;
 import com.google.android.gms.fido.fido2.Fido2ApiClient;
-import com.google.android.gms.fido.fido2.Fido2PendingIntent;
 import com.google.android.gms.fido.fido2.api.common.AuthenticatorAssertionResponse;
 import com.google.android.gms.fido.fido2.api.common.AuthenticatorAttestationResponse;
 import com.google.android.gms.fido.fido2.api.common.AuthenticatorErrorResponse;
-import com.google.android.gms.fido.fido2.api.common.EC2Algorithm;
 import com.google.android.gms.fido.fido2.api.common.PublicKeyCredential;
 import com.google.android.gms.fido.fido2.api.common.PublicKeyCredentialCreationOptions;
 import com.google.android.gms.fido.fido2.api.common.PublicKeyCredentialParameters;
 import com.google.android.gms.fido.fido2.api.common.PublicKeyCredentialRpEntity;
-import com.google.android.gms.fido.fido2.api.common.PublicKeyCredentialType;
 import com.google.android.gms.fido.fido2.api.common.PublicKeyCredentialUserEntity;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
-import com.google.android.gms.tasks.Tasks;
 
 import org.json.JSONObject;
 
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
-import java.util.Collections;
 import java.util.List;
 
 import kotlin.text.Charsets;
@@ -61,6 +56,7 @@ public class MainActivity extends AppCompatActivity {
     private BiometricPrompt.PromptInfo prompt;
     private BiometricPrompt biometricPrompt;
     private String username,password,savedUsername;
+    private ShareKeyHandle storeHandle;
     private String userAgent=BuildConfig.APPLICATION_ID+"/"+BuildConfig.VERSION_NAME+
             "(Android "+Build.VERSION.RELEASE+"; "+Build.MODEL+"; "+Build.BRAND+")";
     private int REQUEST_CODE_REGISTER=1;
@@ -81,6 +77,7 @@ public class MainActivity extends AppCompatActivity {
         activity=this;
         preferences= getSharedPreferences("Save",MODE_PRIVATE);
         editor=preferences.edit();
+        storeHandle = new ShareKeyHandle(getApplicationContext());
 //        prompt=new BiometricPrompt.PromptInfo.Builder()
 //                .setTitle("指紋認證")
 //                .setSubtitle("使用掃描器認證以進行下一步")
@@ -100,8 +97,8 @@ public class MainActivity extends AppCompatActivity {
 //                        Toast.makeText(getApplicationContext(), "註冊成功!", Toast.LENGTH_SHORT).show();
 //                        editor.commit();
 //                        api.registerRequest();
-////                        Intent intent = new Intent(MainActivity.this, CredentialsActivity.class);
-////                        startActivity(intent);
+//                        Intent intent = new Intent(MainActivity.this, CredentialsActivity.class);
+//                        startActivity(intent);
 //                        finish();
 //                    }
 //
@@ -224,6 +221,7 @@ public class MainActivity extends AppCompatActivity {
     private void handleRegisterResponse(byte[] fido2Response,PublicKeyCredential credential) {
         AuthenticatorAttestationResponse response = AuthenticatorAttestationResponse.deserializeFromBytes(fido2Response);
         String keyHandleBase64 = Base64.encodeToString(response.getKeyHandle(), Base64.NO_WRAP);
+        storeHandle.saveKeyHandle(response.getKeyHandle());
         String clientDataJsonBody = new String(response.getClientDataJSON(), Charsets.UTF_8).getBytes(StandardCharsets.UTF_8).toString();
         String clientDataJson = Base64.encodeToString(response.getClientDataJSON(),Base64.NO_WRAP);
         String attestationObjectBase64 = Base64.encodeToString(response.getAttestationObject(), Base64.NO_WRAP);
@@ -272,6 +270,7 @@ public class MainActivity extends AppCompatActivity {
         secureRandom.nextBytes(challenge);
         return challenge;
     }
+
     //判斷有否帳號密碼
     public void init(){
         savedUsername =getSharedPreferences("Save",0).getString(Preferences_Username_Key,"");

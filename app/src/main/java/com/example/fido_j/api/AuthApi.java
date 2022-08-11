@@ -1,7 +1,9 @@
 package com.example.fido_j.api;
 
 import android.app.Activity;
+import android.content.Context;
 import android.os.Build;
+import android.preference.PreferenceDataStore;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -10,6 +12,7 @@ import androidx.annotation.RequiresApi;
 
 import com.example.fido_j.Account;
 import com.example.fido_j.BuildConfig;
+import com.example.fido_j.ShareKeyHandle;
 import com.google.android.gms.fido.common.Transport;
 import com.google.android.gms.fido.fido2.api.common.Attachment;
 import com.google.android.gms.fido.fido2.api.common.AuthenticatorAttestationResponse;
@@ -280,7 +283,8 @@ public class AuthApi {
             }
         });
     }
-    public void signinRequest(String credId,SignRequestInterface signRequestInterface){
+    public void signinRequest(String credId, Context context, SignRequestInterface signRequestInterface){
+        ShareKeyHandle storeHandle = new ShareKeyHandle(context);
         MediaType JSON
                 = MediaType.parse("application/json; charset=utf-8");
         //此api不用json值
@@ -312,7 +316,7 @@ public class AuthApi {
                         Log.d("AllowCredentials", "" + allowCredentials);
 
                         descriptorEntity=new PublicKeyCredentialDescriptor("public-key",
-                                allowCredentials.getString("id").getBytes(StandardCharsets.UTF_8),
+                                storeHandle.loadKeyHandle(),
                                 transports
                         );
                     }
