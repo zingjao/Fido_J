@@ -2,19 +2,24 @@ package com.example.fido_j.api;
 
 import android.app.Activity;
 import android.os.Build;
-import android.util.Base64;
 import android.util.Log;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 
+import com.example.fido_j.Account;
+import com.example.fido_j.BuildConfig;
+import com.google.android.gms.fido.common.Transport;
 import com.google.android.gms.fido.fido2.api.common.Attachment;
 import com.google.android.gms.fido.fido2.api.common.AuthenticatorAttestationResponse;
 import com.google.android.gms.fido.fido2.api.common.AuthenticatorSelectionCriteria;
 import com.google.android.gms.fido.fido2.api.common.EC2Algorithm;
 import com.google.android.gms.fido.fido2.api.common.PublicKeyCredential;
 import com.google.android.gms.fido.fido2.api.common.PublicKeyCredentialCreationOptions;
+import com.google.android.gms.fido.fido2.api.common.PublicKeyCredentialDescriptor;
 import com.google.android.gms.fido.fido2.api.common.PublicKeyCredentialParameters;
+import com.google.android.gms.fido.fido2.api.common.PublicKeyCredentialRequestOptions;
 import com.google.android.gms.fido.fido2.api.common.PublicKeyCredentialRpEntity;
 import com.google.android.gms.fido.fido2.api.common.PublicKeyCredentialType;
 import com.google.android.gms.fido.fido2.api.common.PublicKeyCredentialUserEntity;
@@ -26,6 +31,7 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -42,14 +48,19 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 public class AuthApi {
-    private String username,password,sessionID,challenge;
+    private String username;
+    private String password;
+    private String sessionID;
+    private String challenge,requestChallenge;
     AuthenticatorAttestationResponse response;
     private static final HashMap<String,List<Cookie>> cookieStore = new HashMap<>();
     private PublicKeyCredentialRpEntity rpEntity;
     private PublicKeyCredentialUserEntity userEntity;
+    public PublicKeyCredentialDescriptor descriptorEntity;
     private List<PublicKeyCredentialParameters> parametersList;
     private AuthenticatorSelectionCriteria.Builder authenticatorEntity;
     private PublicKeyCredentialCreationOptions options;
+    private PublicKeyCredentialRequestOptions requestOptions;
     OkHttpClient client = new OkHttpClient().newBuilder()
             .cookieJar(new CookieJar() {
                 @Override
@@ -71,7 +82,7 @@ public class AuthApi {
             .build();
 
     private final String BASE_URL = "https://entertaining-maddening-beluga.glitch.me/auth";
-    public void username(String username){
+    public void username(String username, AccountInterface accountInterface){
         this.username=username;
         MediaType JSON
                 = MediaType.parse("application/json; charset=utf-8");
@@ -90,7 +101,7 @@ public class AuthApi {
         call.enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                Log.d("Fail:", e.toString());
+                 accountInterface.AccountFail(e.toString());
             }
 
             @RequiresApi(api = Build.VERSION_CODES.O)
@@ -99,11 +110,12 @@ public class AuthApi {
                 // 連線成功
                 String result = response.body().string();
                 Log.d("result:",""+result);
+                accountInterface.AccountSuccess(result);
             }
         });
 
     }
-    public void password(String password){
+    public void password(String password,PasswordInterface passwordInterface){
         MediaType JSON
                 = MediaType.parse("application/json; charset=utf-8");
         JSONObject json = new JSONObject();
@@ -121,17 +133,18 @@ public class AuthApi {
         call.enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                Log.d("Fail:", e.toString());
+                passwordInterface.PasswordFail(e.toString());
             }
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                 // 連線成功
                 String result = response.body().string();
                 Log.d("result:",""+result+"\n");
+                passwordInterface.PasswordSuccess();
             }
         });
     }
-    public PublicKeyCredentialCreationOptions registerRequest(){
+    public void registerRequest(RequestInterface requestInterface){
         MediaType JSON
                 = MediaType.parse("application/json; charset=utf-8");
         JSONObject json = new JSONObject();
@@ -156,7 +169,7 @@ public class AuthApi {
         call.enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                Log.d("RegisterFail:", e.toString());
+                requestInterface.RequestFail(e.toString());
             }
 
             @Override
@@ -165,8 +178,16 @@ public class AuthApi {
                 String result = response.body().string();
                 try {
                     JSONObject json = new JSONObject(result);
-                    challenge= String.valueOf(json.get("challenge"));
+                    if(json.getString("challenge")!=null){
+                        try{
+                            challenge= String.valueOf(json.get("challenge"));
+                        }
+                        catch(Exception e){
+                            Log.d("ChallengeError",""+e.getMessage());
+                        }
+                    }
                     Log.d("Challenge",""+json.get("challenge"));
+                    Log.d("JsonRequest",""+json.toString());
                     JSONObject rp = json.getJSONObject("rp");
                     JSONObject user = json.getJSONObject("user");
                     JSONArray pubKeyParams = json.getJSONArray("pubKeyCredParams");
@@ -192,23 +213,25 @@ public class AuthApi {
                     } catch (Attachment.UnsupportedAttachmentException e) {
                         e.printStackTrace();
                     }
-                    options = new PublicKeyCredentialCreationOptions.Builder()
-                            .setUser(userEntity)
-                            .setChallenge(Base64.encode(challenge.getBytes(StandardCharsets.UTF_8),Base64.DEFAULT))
-                            .setParameters(parametersList)
-                            .setTimeoutSeconds(Double.valueOf(1800000))
-                            .setAuthenticatorSelection(authenticatorEntity.build())
-                            .setRp(rpEntity)
-                            .build();
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        options = new PublicKeyCredentialCreationOptions.Builder()
+                                .setUser(userEntity)
+                                .setChallenge(java.util.Base64.getUrlDecoder().decode(challenge))
+                                .setParameters(parametersList)
+                                .setTimeoutSeconds(Double.valueOf(1800000))
+                                .setAuthenticatorSelection(authenticatorEntity.build())
+                                .setRp(rpEntity)
+                                .build();
+                    }
+                    requestInterface.RequestSuccess(options);
                 } catch (JSONException e) {
                     Log.d("ChallengeErr",""+e.getMessage());
                 }
                 Log.d("RegisterResult:",""+result);
             }
         });
-        return options;
     }
-    public void registerResponse(String keyHandle,String datajson,String attestationObject,PublicKeyCredential credential){
+    public void registerResponse(String keyHandle,String datajson,String attestationObject,PublicKeyCredential credential,ResponseInterface responseInterface){
         MediaType JSON
                 = MediaType.parse("application/json; charset=utf-8");
         JSONObject json = new JSONObject();
@@ -224,23 +247,108 @@ public class AuthApi {
         } catch (JSONException e) {
             e.printStackTrace();
         }
-//        RequestBody body = RequestBody.create(String.valueOf(json), JSON); // new
-//        Request request = new Request.Builder()
-//                .url(BASE_URL+"/registerResponse")
-//                .post(body)
-//                .build();
-//        Call call = client.newCall(request);
-//        call.enqueue(new Callback() {
-//            @Override
-//            public void onFailure(@NonNull Call call, @NonNull IOException e) {
-//                Log.d("RegisterResponseErr",""+e.getMessage());
-//            }
-//
-//            @Override
-//            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-//                Log.d("RegisterResponse",""+response.body().string());
-//            }
-//        });
+        RequestBody body = RequestBody.create(String.valueOf(json), JSON); // new
+        Request request = new Request.Builder()
+                .url(BASE_URL+"/registerResponse")
+                .header("X-Requested-With","XMLHttpRequest")
+                .header("User-Agent", BuildConfig.APPLICATION_ID+"/"+BuildConfig.VERSION_NAME +
+                        "(Android "+Build.VERSION.RELEASE+"; "+Build.MODEL+"; "+Build.BRAND+")")
+                .post(body)
+                .build();
+        Call call = client.newCall(request);
+        call.enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                Log.d("RegisterResponseErr",""+e.getMessage());
+                responseInterface.ResponseFail(e.getMessage());
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                String result = response.body().string();
+                Log.d("RegisterResponseSuccess",""+result);
+                try {
+                    JSONObject json = new JSONObject(result);
+                    if(json.getString("username")!=null){
+                        responseInterface.ResponseSuccess(json);
+                    }
+                } catch (Exception e) {
+                    responseInterface.ResponseFail(e.getMessage());
+                }
+
+            }
+        });
+    }
+    public void signinRequest(String credId,SignRequestInterface signRequestInterface){
+        MediaType JSON
+                = MediaType.parse("application/json; charset=utf-8");
+        //此api不用json值
+        RequestBody body = RequestBody.create("{}", JSON); // new
+        Request request = new Request.Builder()
+                .url(BASE_URL+"/signinRequest?credId="+credId)
+                .header("X-Requested-With","XMLHttpRequest")
+                .post(body)
+                .build();
+        Call call = client.newCall(request);
+        call.enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                signRequestInterface.SignRequestFail(e.getMessage());
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                String result=response.body().string();
+                Log.d("SignInRequestResult",""+result);
+                try {
+                    JSONObject json = new JSONObject(result);
+                    if(descriptorEntity==null){
+                        JSONObject allowCredentials = json.getJSONArray("allowCredentials").getJSONObject(0);
+                        Log.d("AllowCredentials",""+allowCredentials);
+                        descriptorEntity=new PublicKeyCredentialDescriptor("public-key",
+                                allowCredentials.getString("id").getBytes(StandardCharsets.UTF_8),
+                                null
+                        );
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        requestOptions = new PublicKeyCredentialRequestOptions.Builder()
+                                .setRpId(String.valueOf(json.get("rpId")))
+                                //有時會報bad base-64錯誤(因為challenge有符號無法轉換)
+                                .setChallenge(Base64.getUrlDecoder().decode(json.getString("challenge")))
+                                .setAllowList(Collections.singletonList(descriptorEntity))
+                                .setTimeoutSeconds(Double.valueOf(1800000))
+                                .build();
+                    }
+                    signRequestInterface.SignRequestSuccess(requestOptions);
+                } catch (Exception e) {
+                    Log.d("Build-RequestOptions","Failed By:"+e.getMessage());
+                }
+
+            }
+        });
+    }
+    public void signinResponse(){
+
+    }
+    public interface AccountInterface{
+        void AccountSuccess(String result);
+        void AccountFail(String msg);
+    }
+    public interface PasswordInterface{
+        void PasswordSuccess();
+        void PasswordFail(String msg);
+    }
+    public interface RequestInterface{
+        void RequestSuccess(PublicKeyCredentialCreationOptions publicKeyCredentialCreationOptions);
+        void RequestFail(String msg);
+    }
+    public interface ResponseInterface{
+        void ResponseSuccess(JSONObject json);
+        void ResponseFail(String msg);
+    }
+    public interface SignRequestInterface{
+        void SignRequestSuccess(PublicKeyCredentialRequestOptions publicKeyCredentialRequestOptions);
+        void SignRequestFail(String msg);
     }
 }
 

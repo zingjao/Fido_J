@@ -39,6 +39,9 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 
+import org.json.JSONObject;
+
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Collections;
 import java.util.List;
@@ -114,50 +117,66 @@ public class MainActivity extends AppCompatActivity {
             username=binding.etUsername.getText().toString();
             password=binding.etPassword.getText().toString();
             if(!"".equals(username)||!"".equals(password)) {
-                new Thread(new Runnable() {
+                api.username(username, new AuthApi.AccountInterface() {
                     @Override
-                    public void run() {
-                        api.username(username);
-                        try {
-                            Thread.sleep(3000);
-                            api.password(password);
-                            Thread.sleep(5000);
-                            options = api.registerRequest();
-                            Log.d("Options:",""+options);
+                    public void AccountSuccess(String result) {
+                        api.password(password, new AuthApi.PasswordInterface() {
+                            @Override
+                            public void PasswordSuccess() {
+                                api.registerRequest(new AuthApi.RequestInterface() {
+                                    @Override
+                                    public void RequestSuccess(PublicKeyCredentialCreationOptions publicKeyCredentialCreationOptions) {
+                                        options = publicKeyCredentialCreationOptions;
+                                        Log.d("Options",""+options);
+                                        Fido2ApiClient fido2ApiClient = Fido.getFido2ApiClient(getApplicationContext());
+                                        fido2PendingIntent = fido2ApiClient.getRegisterPendingIntent(options);
 
-                            Fido2ApiClient fido2ApiClient = Fido.getFido2ApiClient(getApplicationContext());
-                            fido2PendingIntent = fido2ApiClient.getRegisterPendingIntent(options);
+                                        fido2PendingIntent.addOnSuccessListener(new OnSuccessListener<PendingIntent>() {
 
-                            fido2PendingIntent.addOnSuccessListener(new OnSuccessListener<PendingIntent>() {
+                                            @Override
+                                            public void onSuccess(PendingIntent fido2PendingIntent) {
+                                                new Thread(new Runnable() {
+                                                    @Override
+                                                    public void run() {
+                                                        try {
+                                                            Log.d("IntentSenderrrrr",""+fido2PendingIntent.getIntentSender().toString());
+                                                            activity.startIntentSenderForResult(
+                                                                    fido2PendingIntent.getIntentSender(),
+                                                                    1,
+                                                                    null, // fillInIntent,
+                                                                    0, // flagsMask,
+                                                                    0, // flagsValue,
+                                                                    0); //extraFlags);
+                                                        } catch (Exception e) {
+                                                            Log.d("LOGTAG", "" + e.getMessage());
+                                                        }
+                                                    }
+                                                }).start();
 
-                                @Override
-                                public void onSuccess(PendingIntent fido2PendingIntent) {
-                                    new Thread(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            try {
-                                                Log.d("IntentSenderrrrr",""+fido2PendingIntent.getIntentSender().toString());
-                                                activity.startIntentSenderForResult(
-                                                        fido2PendingIntent.getIntentSender(),
-                                                        1,
-                                                        null, // fillInIntent,
-                                                        0, // flagsMask,
-                                                        0, // flagsValue,
-                                                        0); //extraFlags);
-                                            } catch (Exception e) {
-                                                Log.d("LOGTAG", "" + e.getMessage());
                                             }
-                                        }
-                                    }).start();
+                                        });
+                                    }
 
-                                }
-                            });
-                        } catch (Exception e) {
-                            Log.d("ErrMessage",""+e.getMessage());
-                        }
+                                    @Override
+                                    public void RequestFail(String msg) {
+                                        Log.d("RequestError",""+msg);
+                                    }
+                                });
+                            }
 
+                            @Override
+                            public void PasswordFail(String msg) {
+                                Log.d("PasswordError",""+msg);
+                            }
+                        });
                     }
-                }).start();
+
+                    @Override
+                    public void AccountFail(String msg) {
+                        Log.d("AccountError",""+msg);
+                    }
+                });
+
                 editor.putString(Preferences_Username_Key,username);
                 editor.putString(Preferences_Password_Key,password);
                 editor.commit();
@@ -205,12 +224,24 @@ public class MainActivity extends AppCompatActivity {
     private void handleRegisterResponse(byte[] fido2Response,PublicKeyCredential credential) {
         AuthenticatorAttestationResponse response = AuthenticatorAttestationResponse.deserializeFromBytes(fido2Response);
         String keyHandleBase64 = Base64.encodeToString(response.getKeyHandle(), Base64.NO_WRAP);
-        String clientDataJsonBody = new String(response.getClientDataJSON(), Charsets.UTF_8);
+        String clientDataJsonBody = new String(response.getClientDataJSON(), Charsets.UTF_8).getBytes(StandardCharsets.UTF_8).toString();
         String clientDataJson = Base64.encodeToString(response.getClientDataJSON(),Base64.NO_WRAP);
         String attestationObjectBase64 = Base64.encodeToString(response.getAttestationObject(), Base64.NO_WRAP);
-        api.registerResponse(keyHandleBase64,clientDataJson,attestationObjectBase64,credential);
+        api.registerResponse(keyHandleBase64,clientDataJson,attestationObjectBase64,credential, new AuthApi.ResponseInterface() {
+            @Override
+            public void ResponseSuccess(JSONObject jsonObject) {
+//                Toast.makeText(getApplicationContext(),"註冊成功",Toast.LENGTH_SHORT).show();
+                finish();
+            }
+
+            @Override
+            public void ResponseFail(String msg) {
+                Log.d("ResponseFail",""+msg);
+            }
+        });
         Log.d("LOG_TAG", "keyHandleBase64:"+keyHandleBase64);
         Log.d("LOG_TAG", "clientDataJSON:"+clientDataJson);
+        Log.d("LOG_TAG", "clientDataJSONBodyy:"+clientDataJsonBody);
         Log.d("LOG_TAG", "attestationObjectBase64:"+attestationObjectBase64);
     }
     private void handleSignResponse(byte[] fido2Response) {
@@ -247,21 +278,21 @@ public class MainActivity extends AppCompatActivity {
         password =getSharedPreferences("Save",0).getString(Preferences_Password_Key,"");
         credentials = getSharedPreferences("Save",0).getInt(Credentials_Key,0);
         Log.d("Main","User:"+username+"\n"+"Pass:"+password);
-        if(rpEntity==null) {
-            rpEntity = new PublicKeyCredentialRpEntity("entertaining-maddening-beluga.glitch.me", "WebAuthn Codelab", null);
-        }
-        if (userEntity==null) {
-            userEntity= new PublicKeyCredentialUserEntity(
-                    "AR1SPUq7H6u5uKONczmR3r3r3vso6X0VamBTDq8QgVA".getBytes(),
-                    "uu",
-                    null,
-                    "uu"
-            );
-        }
-        parametersList = Collections.singletonList(new PublicKeyCredentialParameters(
-                PublicKeyCredentialType.PUBLIC_KEY.toString(),
-                EC2Algorithm.ES256.getAlgoValue()
-        ));
+//        if(rpEntity==null) {
+//            rpEntity = new PublicKeyCredentialRpEntity("entertaining-maddening-beluga.glitch.me", "WebAuthn Codelab", null);
+//        }
+//        if (userEntity==null) {
+//            userEntity= new PublicKeyCredentialUserEntity(
+//                    "AR1SPUq7H6u5uKONczmR3r3r3vso6X0VamBTDq8QgVA".getBytes(),
+//                    "uu",
+//                    null,
+//                    "uu"
+//            );
+//        }
+//        parametersList = Collections.singletonList(new PublicKeyCredentialParameters(
+//                PublicKeyCredentialType.PUBLIC_KEY.toString(),
+//                EC2Algorithm.ES256.getAlgoValue()
+//        ));
         //需+驗證id是否為空的判斷
 //        if(credentials==1){
 //            Intent intent = new Intent(MainActivity.this, CredentialsActivity.class);
