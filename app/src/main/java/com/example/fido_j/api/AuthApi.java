@@ -29,6 +29,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -287,6 +288,8 @@ public class AuthApi {
         Request request = new Request.Builder()
                 .url(BASE_URL+"/signinRequest?credId="+credId)
                 .header("X-Requested-With","XMLHttpRequest")
+                .header("User-Agent", BuildConfig.APPLICATION_ID+"/"+BuildConfig.VERSION_NAME +
+                        "(Android "+Build.VERSION.RELEASE+"; "+Build.MODEL+"; "+Build.BRAND+")")
                 .post(body)
                 .build();
         Call call = client.newCall(request);
@@ -301,19 +304,21 @@ public class AuthApi {
                 String result=response.body().string();
                 Log.d("SignInRequestResult",""+result);
                 try {
+                    ArrayList<Transport> transports= new ArrayList<>();
+                    transports.add(Transport.INTERNAL);
                     JSONObject json = new JSONObject(result);
                     if(descriptorEntity==null){
                         JSONObject allowCredentials = json.getJSONArray("allowCredentials").getJSONObject(0);
-                        Log.d("AllowCredentials",""+allowCredentials);
+                        Log.d("AllowCredentials", "" + allowCredentials);
+
                         descriptorEntity=new PublicKeyCredentialDescriptor("public-key",
                                 allowCredentials.getString("id").getBytes(StandardCharsets.UTF_8),
-                                null
+                                transports
                         );
                     }
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         requestOptions = new PublicKeyCredentialRequestOptions.Builder()
                                 .setRpId(String.valueOf(json.get("rpId")))
-                                //有時會報bad base-64錯誤(因為challenge有符號無法轉換)
                                 .setChallenge(Base64.getUrlDecoder().decode(json.getString("challenge")))
                                 .setAllowList(Collections.singletonList(descriptorEntity))
                                 .setTimeoutSeconds(Double.valueOf(1800000))

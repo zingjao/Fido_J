@@ -203,7 +203,10 @@ public class LoginActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        Log.d("RequestOptions",""+requestOptions);
+        Log.d("RequestOptions",""+data.hasExtra(Fido.FIDO2_KEY_RESPONSE_EXTRA)+"\n"
+        +data.hasExtra(Fido.FIDO2_KEY_CREDENTIAL_EXTRA)+"\n"
+        +data.hasExtra(Fido.FIDO2_KEY_ERROR_EXTRA)+"\n"
+        +data.hasExtra(Fido.KEY_RESPONSE_EXTRA));
         if (resultCode == RESULT_OK) {
             if (data.hasExtra(Fido.FIDO2_KEY_RESPONSE_EXTRA)) {
                 byte[] fido2Response = data.getByteArrayExtra(Fido.FIDO2_KEY_RESPONSE_EXTRA);
