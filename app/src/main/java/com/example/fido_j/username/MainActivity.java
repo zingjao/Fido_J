@@ -121,16 +121,15 @@ public class MainActivity extends AppCompatActivity {
                         api.password(password, new AuthApi.PasswordInterface() {
                             @Override
                             public void PasswordSuccess() {
-                                api.registerRequest(new AuthApi.RequestInterface() {
+                                api.registerFidoOptions(new AuthApi.OptionsRequestInterface() {
                                     @Override
-                                    public void RequestSuccess(PublicKeyCredentialCreationOptions publicKeyCredentialCreationOptions) {
+                                    public void OptionsSuccess(PublicKeyCredentialCreationOptions publicKeyCredentialCreationOptions) {
                                         options = publicKeyCredentialCreationOptions;
                                         Log.d("Options",""+options);
                                         Fido2ApiClient fido2ApiClient = Fido.getFido2ApiClient(getApplicationContext());
                                         fido2PendingIntent = fido2ApiClient.getRegisterPendingIntent(options);
 
                                         fido2PendingIntent.addOnSuccessListener(new OnSuccessListener<PendingIntent>() {
-
                                             @Override
                                             public void onSuccess(PendingIntent fido2PendingIntent) {
                                                 new Thread(new Runnable() {
@@ -150,14 +149,15 @@ public class MainActivity extends AppCompatActivity {
                                                         }
                                                     }
                                                 }).start();
-
                                             }
                                         });
                                     }
 
                                     @Override
-                                    public void RequestFail(String msg) {
-                                        Log.d("RequestError",""+msg);
+                                    public void OptionsFail(String msg) {
+                                        Looper.prepare();
+                                        Toast.makeText(getApplicationContext(),msg,Toast.LENGTH_SHORT).show();
+                                        Looper.loop();
                                     }
                                 });
                             }
@@ -221,24 +221,38 @@ public class MainActivity extends AppCompatActivity {
     private void handleRegisterResponse(byte[] fido2Response,PublicKeyCredential credential) {
         AuthenticatorAttestationResponse response = AuthenticatorAttestationResponse.deserializeFromBytes(fido2Response);
         String keyHandleBase64 = Base64.encodeToString(response.getKeyHandle(), Base64.NO_WRAP);
-        Log.d("KeyHandle", "" + android.util.Base64.encodeToString(storeHandle.loadKeyHandle(), android.util.Base64.DEFAULT));
+        Log.d("KeyHandle", "" + Base64.encodeToString(storeHandle.loadKeyHandle(), Base64.DEFAULT));
         String clientDataJsonBody = new String(response.getClientDataJSON(), Charsets.UTF_8).getBytes(StandardCharsets.UTF_8).toString();
         String clientDataJson = Base64.encodeToString(response.getClientDataJSON(),Base64.NO_WRAP);
         String attestationObjectBase64 = Base64.encodeToString(response.getAttestationObject(), Base64.NO_WRAP);
         storeHandle.saveKeyHandle(response.getKeyHandle());
         storeHandle.setClientDataJSON(response.getClientDataJSON());
-        api.registerResponse(keyHandleBase64,clientDataJson,attestationObjectBase64,credential, new AuthApi.ResponseInterface() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            storeHandle.setId(java.util.Base64.getUrlDecoder().decode(credential.getId()));
+        }
+        api.registerRequest(new AuthApi.RequestInterface() {
             @Override
-            public void ResponseSuccess(JSONObject jsonObject) {
-                showRegistSuccess();
-                finish();
+            public void RequestSuccess(PublicKeyCredentialCreationOptions publicKeyCredentialCreationOptions) {
+                api.registerResponse(keyHandleBase64,clientDataJson,attestationObjectBase64,credential, new AuthApi.ResponseInterface() {
+                    @Override
+                    public void ResponseSuccess(JSONObject jsonObject) {
+                        showRegistSuccess();
+                        finish();
+                    }
+
+                    @Override
+                    public void ResponseFail(String msg) {
+                        Log.d("ResponseFail",""+msg);
+                    }
+                });
             }
 
             @Override
-            public void ResponseFail(String msg) {
-                Log.d("ResponseFail",""+msg);
+            public void RequestFail(String msg) {
+                Log.d("RequestFail",msg);
             }
         });
+
         Log.d("LOG_TAG", "keyHandleBase64:"+keyHandleBase64);
         Log.d("LOG_TAG", "clientDataJSON:"+clientDataJson);
         Log.d("LOG_TAG", "clientDataJSONBodyy:"+clientDataJsonBody);
@@ -263,10 +277,10 @@ public class MainActivity extends AppCompatActivity {
         String authenticatorDataBase64 = Base64.encodeToString(response.getAuthenticatorData(), Base64.NO_WRAP);
         String signatureBase64 = Base64.encodeToString(response.getSignature(), Base64.NO_WRAP);
 
-        Log.d("LOG_TAG", "keyHandleBase64:"+keyHandleBase64);
-        Log.d("LOG_TAG", "clientDataJSON:"+clientDataJson);
-        Log.d("LOG_TAG", "authenticatorDataBase64:"+authenticatorDataBase64);
-        Log.d("LOG_TAG", "signatureBase64:"+signatureBase64);
+        Log.d("LOG_TAGGG", "keyHandleBase64:"+keyHandleBase64);
+        Log.d("LOG_TAGGG", "clientDataJSON:"+clientDataJson);
+        Log.d("LOG_TAGGG", "authenticatorDataBase64:"+authenticatorDataBase64);
+        Log.d("LOG_TAGGG", "signatureBase64:"+signatureBase64);
 
         String signFido2Result = "Authenticator Assertion Response\n\n" +
                 "keyHandleBase64:\n" +

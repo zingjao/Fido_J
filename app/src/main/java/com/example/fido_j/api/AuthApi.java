@@ -52,8 +52,8 @@ public class AuthApi {
     private String challenge,requestChallenge;
     AuthenticatorAttestationResponse response;
     private static final HashMap<String,List<Cookie>> cookieStore = new HashMap<>();
-    private PublicKeyCredentialRpEntity rpEntity;
-    private PublicKeyCredentialUserEntity userEntity;
+    private PublicKeyCredentialRpEntity optionRpEntity,rpEntity;
+    private PublicKeyCredentialUserEntity optionUserEntity,userEntity;
     public PublicKeyCredentialDescriptor descriptorEntity;
     private List<PublicKeyCredentialParameters> parametersList;
     private AuthenticatorSelectionCriteria.Builder authenticatorEntity;
@@ -139,6 +139,74 @@ public class AuthApi {
                 String result = response.body().string();
                 Log.d("result:",""+result+"\n");
                 passwordInterface.PasswordSuccess();
+            }
+        });
+    }
+    public void registerFidoOptions(OptionsRequestInterface optionsRequestInterface){
+
+        Request request = new Request.Builder()
+                .url(BASE_URL+"/registerFidoOptions")
+                .header("X-Requested-With","XMLHttpRequest")
+                .get()
+                .build();
+        Call call = client.newCall(request);
+        call.enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                optionsRequestInterface.OptionsFail(e.getMessage());
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                String result = response.body().string();
+                try {
+                    JSONObject json = new JSONObject(result);
+                    if(json.getString("challenge")!=null){
+                        try{
+                            challenge= String.valueOf(json.get("challenge"));
+                        }
+                        catch(Exception e){
+                            Log.d("ChallengeError",""+e.getMessage());
+                        }
+                    }
+                    Log.d("Challenge",""+json.get("challenge"));
+                    Log.d("JsonRequest",""+json.toString());
+                    JSONObject rp = json.getJSONObject("rp");
+                    JSONObject user = json.getJSONObject("user");
+                    JSONArray pubKeyParams = json.getJSONArray("pubKeyCredParams");
+                    JSONObject authenticatorSelection = json.getJSONObject("authenticatorSelection");
+                    if(optionRpEntity==null) {
+                        optionRpEntity = new PublicKeyCredentialRpEntity(String.valueOf(rp.get("id")), String.valueOf(rp.get("name")), null);
+                    }
+                    if (optionUserEntity==null) {
+                        optionUserEntity= new PublicKeyCredentialUserEntity(
+                                String.valueOf(user.get("id")).getBytes(),
+                                String.valueOf(user.get("name")),
+                                null,
+                                String.valueOf(user.get("displayName"))
+                        );
+                    }
+                    parametersList = Collections.singletonList(new PublicKeyCredentialParameters(
+                            PublicKeyCredentialType.PUBLIC_KEY.toString(),
+                            EC2Algorithm.ES256.getAlgoValue()
+                    ));
+                    authenticatorEntity = new AuthenticatorSelectionCriteria.Builder();
+                    authenticatorEntity.setAttachment(Attachment.PLATFORM);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        options = new PublicKeyCredentialCreationOptions.Builder()
+                                .setUser(optionUserEntity)
+                                .setChallenge(java.util.Base64.getUrlDecoder().decode(challenge))
+                                .setParameters(parametersList)
+                                .setTimeoutSeconds(Double.valueOf(1800000))
+                                .setAuthenticatorSelection(authenticatorEntity.build())
+                                .setRp(optionRpEntity)
+                                .build();
+                    }
+                    optionsRequestInterface.OptionsSuccess(options);
+                } catch (JSONException e) {
+                    Log.d("ChallengeErr",""+e.getMessage());
+                }
+                Log.d("RegisterResult:",""+result);
             }
         });
     }
@@ -340,6 +408,10 @@ public class AuthApi {
     public interface PasswordInterface{
         void PasswordSuccess();
         void PasswordFail(String msg);
+    }
+    public interface OptionsRequestInterface{
+        void OptionsSuccess(PublicKeyCredentialCreationOptions publicKeyCredentialCreationOptions);
+        void OptionsFail(String msg);
     }
     public interface RequestInterface{
         void RequestSuccess(PublicKeyCredentialCreationOptions publicKeyCredentialCreationOptions);

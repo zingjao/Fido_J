@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.IntentSender;
 import android.media.audiofx.DynamicsProcessing;
 import android.os.Bundle;
+import android.os.Looper;
 import android.util.Base64;
 import android.util.Log;
 import android.widget.Toast;
@@ -158,7 +159,9 @@ public class LoginActivity extends AppCompatActivity {
 
                                         @Override
                                         public void SignRequestFail(String msg) {
-                                            Log.d("SignInRequestFail",""+msg);
+                                            Looper.prepare();
+                                            Toast.makeText(getApplicationContext(),msg,Toast.LENGTH_SHORT).show();
+                                            Looper.loop();
                                         }
                                     });
                                 }
@@ -242,14 +245,16 @@ public class LoginActivity extends AppCompatActivity {
         String clientDataJson = new String(response.getClientDataJSON(), Charsets.UTF_8);
         String authenticatorDataBase64 = Base64.encodeToString(response.getAuthenticatorData(), Base64.DEFAULT);
         String signatureBase64 = Base64.encodeToString(response.getSignature(), Base64.DEFAULT);
+        String userHandle64 = Base64.encodeToString(response.getKeyHandle(),Base64.NO_WRAP);
         storeHandle.setAuthenticatorData(response.getAuthenticatorData());
         storeHandle.setSignature(response.getSignature());
         storeHandle.setClientDataJSON(response.getClientDataJSON());
 //        storeHandle.setUserHandle(response.getUserHandle()); //null
-        Log.d("LOG_TAG", "keyHandleBase64:"+keyHandleBase64);
-        Log.d("LOG_TAG", "clientDataJSON:"+clientDataJson);
-        Log.d("LOG_TAG", "authenticatorDataBase64:"+authenticatorDataBase64);
-        Log.d("LOG_TAG", "signatureBase64:"+signatureBase64);
+        Log.d("LOG_TAGg", "userHandleBase64:"+response.getUserHandle());
+        Log.d("LOG_TAGg", "keyHandleBase64:"+keyHandleBase64);
+        Log.d("LOG_TAGg", "clientDataJSON:"+clientDataJson);
+        Log.d("LOG_TAGg", "authenticatorDataBase64:"+authenticatorDataBase64);
+        Log.d("LOG_TAGg", "signatureBase64:"+signatureBase64);
         Toast.makeText(getApplicationContext(),"登入成功",Toast.LENGTH_SHORT).show();
         Intent intent = new Intent(LoginActivity.this,CredentialsActivity.class);
         startActivity(intent);
