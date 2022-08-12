@@ -79,7 +79,7 @@ public class AuthApi {
             })
             .build();
 
-    private final String BASE_URL = "https://entertaining-maddening-beluga.glitch.me/auth";
+    private final String BASE_URL = "https://zero-trust-test.nutc-imac.com";
     public void username(String username, AccountInterface accountInterface){
         this.username=username;
         MediaType JSON
