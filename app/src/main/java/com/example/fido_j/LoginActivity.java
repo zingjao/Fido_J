@@ -58,6 +58,7 @@ public class LoginActivity extends AppCompatActivity {
     private String challenge;
     private int REQUEST_CODE_REGISTER =1;
     private int AUTH_ACTIVITY_RES_5=5;
+    private PreferenceData storeHandle;
     private String publicKey,credId;
     private PublicKeyCredentialRequestOptions requestOptions;
     private Task<PendingIntent> fido2PendingIntent;
@@ -70,8 +71,8 @@ public class LoginActivity extends AppCompatActivity {
 //        setContentView(R.layout.activity_register);
         binding= DataBindingUtil.setContentView(this, R.layout.activity_login);
         activity=this;
+        storeHandle= new PreferenceData(getApplicationContext());
         context=getApplicationContext();
-        init();
 //        prompt=new BiometricPrompt.PromptInfo.Builder()
 //                .setTitle("指紋認證")
 //                .setSubtitle("使用掃描器認證以進行下一步")
@@ -202,6 +203,7 @@ public class LoginActivity extends AppCompatActivity {
             }
         });
     }
+    //驗證跳轉頁面完成後跳此函數
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -224,37 +226,33 @@ public class LoginActivity extends AppCompatActivity {
             }
         }
     }
+    //處理驗證畫面產生錯誤的回傳
     private void handleErrorResponse(byte[] errorBytes) {
         AuthenticatorErrorResponse authenticatorErrorResponse = AuthenticatorErrorResponse.deserializeFromBytes(errorBytes);
         String errorName = authenticatorErrorResponse.getErrorCode().name();
         String errorMessage = authenticatorErrorResponse.getErrorMessage();
         Log.e("LOG_TAG", "errorCode.name:"+errorName);
         Log.e("LOG_TAG", "errorMessage:"+errorMessage);
+        Toast.makeText(getApplicationContext(),errorMessage,Toast.LENGTH_SHORT).show();
     }
-
+    //處理驗證畫面成功的回傳
     private void handleSignResponse(byte[] fido2Response) {
         AuthenticatorAssertionResponse response = AuthenticatorAssertionResponse.deserializeFromBytes(fido2Response);
         String keyHandleBase64 = Base64.encodeToString(response.getKeyHandle(), Base64.DEFAULT);
         String clientDataJson = new String(response.getClientDataJSON(), Charsets.UTF_8);
         String authenticatorDataBase64 = Base64.encodeToString(response.getAuthenticatorData(), Base64.DEFAULT);
         String signatureBase64 = Base64.encodeToString(response.getSignature(), Base64.DEFAULT);
-
+        storeHandle.setAuthenticatorData(response.getAuthenticatorData());
+        storeHandle.setSignature(response.getSignature());
+        storeHandle.setClientDataJSON(response.getClientDataJSON());
+//        storeHandle.setUserHandle(response.getUserHandle()); //null
         Log.d("LOG_TAG", "keyHandleBase64:"+keyHandleBase64);
         Log.d("LOG_TAG", "clientDataJSON:"+clientDataJson);
         Log.d("LOG_TAG", "authenticatorDataBase64:"+authenticatorDataBase64);
         Log.d("LOG_TAG", "signatureBase64:"+signatureBase64);
-
-        String signFido2Result = "Authenticator Assertion Response\n\n" +
-                "keyHandleBase64:\n" +
-                "$keyHandleBase64\n\n" +
-                "clientDataJSON:\n" +
-                "$clientDataJson\n\n" +
-                "authenticatorDataBase64:\n" +
-                "$authenticatorDataBase64\n\n" +
-                "signatureBase64:\n" +
-                "$signatureBase64\n";
-    }
-    public void init(){
-
+        Toast.makeText(getApplicationContext(),"登入成功",Toast.LENGTH_SHORT).show();
+        Intent intent = new Intent(LoginActivity.this,CredentialsActivity.class);
+        startActivity(intent);
+        finish();
     }
 }

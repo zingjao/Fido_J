@@ -20,12 +20,14 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.fido_j.CredentialsAdapter;
 import com.example.fido_j.LoginActivity;
+import com.example.fido_j.PreferenceData;
 import com.example.fido_j.R;
 import com.example.fido_j.databinding.ActivityCreditialsBinding;
 import com.example.fido_j.username.MainActivity;
 import com.google.android.gms.fido.Fido;
 
 import java.util.ArrayList;
+import java.util.Base64;
 
 @RequiresApi(api = Build.VERSION_CODES.M)
 public class CredentialsActivity extends AppCompatActivity {
@@ -43,6 +45,9 @@ public class CredentialsActivity extends AppCompatActivity {
     private String Preferences_Password_Key="USER_PASSWORD_KEY";
     private String Credentials_Key="CREDENTIALS_KEY";
     private String username,challenge;
+    private PreferenceData preferenceData;
+    ArrayList<String> userList = new ArrayList<>();
+    ArrayList<String> challengeList = new ArrayList<>();
     private ActivityResultLauncher<IntentSenderRequest> createCredentialIntentLauncher = registerForActivityResult(
             new ActivityResultContracts.StartIntentSenderForResult(), new ActivityResultCallback<ActivityResult>() {
                 @Override
@@ -54,13 +59,12 @@ public class CredentialsActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         binding = DataBindingUtil.setContentView(this,R.layout.activity_creditials);
-//        setContentView(R.layout.activity_auth);
-//        createCredentialIntentLauncher.launch(
-//                IntentSenderRequest.Builder(intent).build()
-//        );
+        preferenceData = new PreferenceData(getApplicationContext());
         preferences= getSharedPreferences("Save",0);
         editor=preferences.edit();
         context=this;
+        username=preferences.getString(Preferences_Username_Key,"");
+        binding.txvTitle.setText("Welcome,"+username+"!");
         init();
 //        manager=BiometricManager.from(context);
 //        switch (manager.canAuthenticate()){
@@ -107,9 +111,7 @@ public class CredentialsActivity extends AppCompatActivity {
 //                        super.onAuthenticationFailed();
 //                        Toast.makeText(getApplicationContext(),"Authen Failed",Toast.LENGTH_SHORT).show();
 //                    }
-//                });
-        binding= DataBindingUtil.setContentView(this,R.layout.activity_creditials);
-//        binding.btnAdd.setOnClickListener(view->{
+//                });//        binding.btnAdd.setOnClickListener(view->{
 //            biometricPrompt.authenticate(prompt);
 //        });
         binding.btnLogout.setOnClickListener(view->{
@@ -128,15 +130,13 @@ public class CredentialsActivity extends AppCompatActivity {
     public void init(){
 //        bundle=getIntent().getExtras();
 //        challenge=bundle.getString("Challenge");
-        username=preferences.getString(Preferences_Username_Key,"");
-        ArrayList<String> userList = new ArrayList<>();
-        ArrayList<String> challengeList = new ArrayList<>();
-        userList.add("username");
-        challengeList.add("challenge");
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            userList.add(Base64.getUrlEncoder().encodeToString(preferenceData.loadKeyHandle()));
+            challengeList.add(Base64.getUrlEncoder().encodeToString(preferenceData.getSignature()));
+        }
         Log.d("tagggg",""+username);
-        binding.txvTitle.setText("Welcome,"+username+"!");
         adapter = new CredentialsAdapter(userList,challengeList);
-        binding.RecyclerView.setLayoutManager(new LinearLayoutManager(getApplicationContext()));//使用LinearLayout布局
+        binding.RecyclerView.setLayoutManager(new LinearLayoutManager(this));//使用LinearLayout布局
         //分割線套件
         binding.RecyclerView.addItemDecoration(new DividerItemDecoration(getApplicationContext(),
                 DividerItemDecoration.VERTICAL));

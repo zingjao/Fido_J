@@ -1,18 +1,14 @@
 package com.example.fido_j.api;
 
-import android.app.Activity;
 import android.content.Context;
 import android.os.Build;
-import android.preference.PreferenceDataStore;
 import android.util.Log;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 
-import com.example.fido_j.Account;
 import com.example.fido_j.BuildConfig;
-import com.example.fido_j.ShareKeyHandle;
+import com.example.fido_j.PreferenceData;
 import com.google.android.gms.fido.common.Transport;
 import com.google.android.gms.fido.fido2.api.common.Attachment;
 import com.google.android.gms.fido.fido2.api.common.AuthenticatorAttestationResponse;
@@ -32,8 +28,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.lang.reflect.Array;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
@@ -284,7 +278,7 @@ public class AuthApi {
         });
     }
     public void signinRequest(String credId, Context context, SignRequestInterface signRequestInterface){
-        ShareKeyHandle storeHandle = new ShareKeyHandle(context);
+        PreferenceData storeHandle = new PreferenceData(context);
         MediaType JSON
                 = MediaType.parse("application/json; charset=utf-8");
         //此api不用json值
@@ -313,9 +307,8 @@ public class AuthApi {
                     JSONObject json = new JSONObject(result);
                     if(descriptorEntity==null){
                         JSONObject allowCredentials = json.getJSONArray("allowCredentials").getJSONObject(0);
-                        Log.d("AllowCredentials", "" + allowCredentials);
-
-                        descriptorEntity=new PublicKeyCredentialDescriptor("public-key",
+                        Log.d("tagggggg",""+storeHandle.loadKeyHandle());
+                        descriptorEntity=new PublicKeyCredentialDescriptor(PublicKeyCredentialType.PUBLIC_KEY.toString(),
                                 storeHandle.loadKeyHandle(),
                                 transports
                         );
@@ -324,6 +317,7 @@ public class AuthApi {
                         requestOptions = new PublicKeyCredentialRequestOptions.Builder()
                                 .setRpId(String.valueOf(json.get("rpId")))
                                 .setChallenge(Base64.getUrlDecoder().decode(json.getString("challenge")))
+                                //身分驗證器
                                 .setAllowList(Collections.singletonList(descriptorEntity))
                                 .setTimeoutSeconds(Double.valueOf(1800000))
                                 .build();
