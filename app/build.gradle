@@ -15,14 +15,8 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
     signingConfigs {
-        debug {
-            storeFile file('C:\\Users\\deepdarker\\AndroidStudioProjects\\fido0810\\Fido_J\\app\\keystore.jks')
-            storePassword 'fido2password'
-            keyAlias 'fido2'
-            keyPassword 'fido2password'
-        }
         release {
-            storeFile file('C:\\Users\\deepdarker\\AndroidStudioProjects\\fido0810\\Fido_J\\app\\keystore.jks')
+            storeFile file('keystore.jks')
             storePassword "fido2password"
             keyAlias "fido2"
             keyPassword "fido2password"
